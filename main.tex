@@ -1,0 +1,143 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1.1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{comment}
+\usepackage{mathtools, nccmath, siunitx}
+
+\newcommand{\bigP}{\mathcal{P}}
+\newcommand{\Ce}{\mathcal{C}}
+\newcommand{\assume}[1]{\vspace{2 pt} \textbf{Assumption}: #1 \vspace{5 pt}}
+
+\newcommand*\mean[1]{\bar{#1}}
+\newcommand{\dotp}[2]{\langle #1 , #2 \rangle}
+
+\renewcommand{\phi}{\varphi}
+
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+
+\DeclareMathOperator{\proj}{proj}
+\newcommand{\vspan}[1]{\text{span}\{ #1 \}}
+\newtheorem{theorem}{Theorem}[section]
+
+\setlength\parindent{0pt}
+
+\title{Atmospheric dispersion modeling}
+\author{Naveen Durvasula, Kevin Qian, Steven Qu, Jacob Stavrianos, Ryan Tse}
+
+\begin{document}
+
+\maketitle
+
+\[ \frac{\partial u}{\partial t} = \nabla \cdot (D \nabla u) - \nabla \cdot (\vec{v} u) + R \]
+
+where $u$ is the concentration, $D$ is the diffusion coefficient, $\vec{v}$ is an external velocity field, and $R$ is the sources and sinks of the pollen.
+
+\section{Finding $D$}
+
+The equation for $D$ is well-recorded for spherical particles. However, pollen particles can be weird. Thus, for the sake of of model generality, we will describe a procedure for computing $D$ for a given mesh model of a desired particle.
+
+\subsection{Review of the Derivation of $D$}
+
+$D$ comes from the analysis of Brownian motion. Since the position derivative of a particle undergoing Brownian motion is undefined, we consider the change in position $\Delta$ of the particle for a \textit{finite} time duration $\tau$. We can expand this as a Taylor series about $\tau$.
+
+%copied from wikpedia, hence latex is shit
+\[ u (x,t+\tau ) = u (x,t)+\tau {\frac {\partial u (x)}{\partial t}}+\cdots \] 
+
+We may now rewrite this by considering the distribution over possible changes in position (distribution over $\Delta$). Given the probability distribution $\phi$ of $\Delta$, we may express $u(x, t+\tau)$ as the following.
+
+$${\displaystyle {\begin{aligned} = {}&\int _{-\infty }^{+\infty } u (x+\Delta ,t)\cdot \varphi (\Delta )\,\mathrm {d} \Delta \\={}& u (x,t)\cdot \int _{-\infty }^{+\infty }\varphi (\Delta )\,d\Delta +{\frac {\partial u }{\partial x}}\cdot \int _{-\infty }^{+\infty }\Delta \cdot \varphi (\Delta )\,\mathrm {d} \Delta +{\frac {\partial ^{2}u }{\partial x^{2}}}\cdot \int _{-\infty }^{+\infty }{\frac {\Delta ^{2}}{2}}\cdot \varphi (\Delta )\,\mathrm {d} \Delta +\cdots \\={}&u (x,t)\cdot 1+0+{\frac {\partial ^{2}u }{\partial x^{2}}}\cdot \int _{-\infty }^{+\infty }{\frac {\Delta ^{2}}{2}}\cdot \varphi (\Delta )\,\mathrm {d} \Delta +\cdots \end{aligned}}}$$
+
+Note that the odd terms cancel out, since $\varphi(\Delta) = \varphi(-\Delta)$. We take the 3rd order approximation.
+
+\[ \frac{\partial u}{\partial t} \approx \frac{\partial ^2 u}{\partial x^2} \int_{-\infty}^{\infty} \frac{\Delta^2}{2\tau} \phi(\Delta) \, d\Delta \]
+
+We call the integral term $D$.
+
+\begin{align*}
+    D &= \int_{-\infty}^{\infty} \frac{\Delta^2}{2\tau} \phi(\Delta) \, d\Delta \\
+    &= \frac{1}{2\tau} \int_{-\infty}^{\infty} \Delta^2 \phi(\Delta) \, d\Delta \\
+    &=  \frac{1}{2\tau} \E[\Delta^2]
+\end{align*}
+
+Note that $\E[\Delta] = 0$ by the properties of Brownian motion.
+
+\begin{align*}
+    \Var [ \Delta ] &= \E [ \Delta ^ 2 ] - \E [\Delta ] ^ 2 \\
+    &= \E[\Delta^2] - 0
+\end{align*}
+
+Thus, we express $D$ in terms of the variance of $\Delta$.
+
+\[ D = \frac{\Var [ \Delta ] }{2\tau} \]
+
+We are now tasked with finding the variance of $\Delta$. In other words, we must find the variance in the position of a pollen particle after being in the system and colliding with air molecules for a finite amount of time $\tau$. We can simulate these collisions to find the variance since air particles' speeds are drawn from a known Maxwellian distribution. Thus, using a physics engine, we may estimate this variance. 
+
+\subsection{Simulation}
+
+We must calculate the variance in position due to the net effect of many exchanges in momentum. We assume the following.
+
+\begin{itemize}
+	\item We assume all particles have the same mass. We may do this since if we choose the expected particle mass, it does not change the calculated variance in position.
+	\item We assume air particle velocity directions are uniformly distributed.
+	\item We assume air particle speeds are drawn from a Maxwellian distribution.
+\end{itemize}
+
+Conceptually, we want to bounce air particles off of pollen particles from every angle, measure the change in pollen particle momentum, and combine the effect of all of these collisions in order to find the net variance in position after elapsed time $\tau$. However this is not so straightforward since we must consider the possiblility of a single air particle hitting the pollen particle and bouncing multiple times. In order to handle this situation, we first calculate the number of interactions per second, then for each interaction, we calculate the number of bounces possible in time $]\tau$ and the net momentum imparted.
+
+\subsubsection{Interactions per Second}
+
+When counting interactions per second, we only care how many times an air particle will interact with the pollen particle for the first time. We do not care if the air particle will bounce multiple times. Thus any air particle that is pointed at the pollen particle and is within $s\tau$ distance of the pollen particle will have an interaction. To compute this, we sum the areas of the 
+
+calculate the variance of $\Delta$ as a vector. 
+
+% STUFF TODO fill this in
+
+We calculate the number of interactions per time $\tau$.
+
+\begin{align*}
+    &{} \int_{\vec{vc}} \, \int_{A\vec{v}} \, \int_s c \tau s \, ds \, dA_{\vec{v}} \, d\vec{v} \\
+    &= \frac{c\tau}{4 \pi} \sqrt{\frac{2RT}{m \pi}} \int_{\vec{v}} \int_{A\vec{v}} \, dA_{\vec{v}} \, d\vec{v}
+\end{align*}
+
+\section{Computing $R$}
+
+We consider one way of particles entering the system and two ways of particles leaving the system. Particles may enter the system at a constant rate from given source locations. Particles may leave the system by getting stuck to the terrain and by decaying over time.
+
+\subsection{Sources}
+
+\subsection{Absolute and Clinical Decay}
+
+Absolute decay refers to the process by which particles are destroyed over time. Clinical decay refers to the process by which particles are made ineffective (i.e.\ mold spores dying) but are not destroyed over time. For the sake of this model, we will represent absolute and clinical decay together. We assume that each particle's lifespan is drawn from some distribution, where "lifespan" accounts for absolute and clinical decay. The distribution will be dependent on the type of particle being modeled. In order to use this distribution, we must track the ages of the particles as they flow through the system.
+
+\subsubsection{Age Profiles}
+
+We consider the concentration of pollen of a given age $a$ at position $\vec{r}$ and time $t$, notated as $z(\vec{r}, t, a)$. Note that $a$ specifies the age of the age profile we are looking at, and $t$ represents the place in time. We define $z_f(\vec{r}, t, a) = z(\vec{r}, t, t + a)$. Thus, $z_f$ represents the concentration of pollen over time assuming that pollen does not age. The convection diffusion equation gives us the change in concentration of a species, in this case pollen of a certain age, over time. Thus, since we are considering the "fixed age" pollen at a place and time, the convection diffusion equation gives us
+
+\[ \frac{\partial z_f}{\partial t} = \nabla \cdot (D \nabla z) + \nabla \cdot (\vec{v} z) + R \]
+
+For simplicity sake, in this section we will notate this as
+
+\[ \frac{\partial z_f}{\partial t} = F(z, \dot{z}, r, t) \]
+
+\begin{align*}
+	\frac{\partial z (t, a+t)}{\partial t} &= \frac{\partial z}{\partial t} + \frac{\partial z}{\partial a} \frac{\partial (a + t)}{\partial t} \\
+	&= (\frac{\partial z}{\partial t} + \frac{\partial z}{\partial a}) \Big\rvert_{(t, a+t)} = F
+\end{align*}
+
+We may solve this PDE by finite difference methods.
+
+
+\subsubsection{Stuck Particles}
+
+Particles also leave the system by becoming stuck to features on the landscape such as bodies of water or buildings. In order to determine the amount of pollen that leaves the system by adhering to a particular feature, we must know the concentration of pollen at a low enough altitude to interact with the feature, the rate at which pollen adheres to the feature, and the exposed surface area of the feature.
+
+\subsubsubsection{Tracking Concentration in the Z-Dimension}
+
+We want to know the concentration of pollen at the correct altitude to adhere to a feature. Thus we are interested in the distribution of track the distribution of pollen in the z-dimension, we 
+
+\end{document}
